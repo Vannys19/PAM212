@@ -1,13 +1,16 @@
-import {View,Text,StyleSheet} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import {View,Text,StyleSheet, Pressable} from 'react-native';
+import Detalles from './detalles';
 
-export default function Profile(){
+export default function Profile({navigation}){
     return(
         <View style={styles.container}>
-            <View style={styles.iconRow}>
-                <Ionicons name="person-outline" size={28} color="green"/>
+
                 <Text style={styles.title}>Perfil de usuario</Text>
-            </View>
+                <Pressable onPress={() => navigation.navigate('detalles')}>
+                    <Text style={{color:'blue', marginTop:20, fontSize:16}}>Ver Detalles</Text>
+                </Pressable>
+
+
         </View>
     );
 }

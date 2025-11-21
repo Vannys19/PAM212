@@ -1,12 +1,18 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import 'react-native-get-random-values';
+import 'react-native-gesture-handler';
+
 
 import Home from './screens/home';
 import Profile from './screens/profile';
 import Settings from './screens/settings';
 
+
+
 const Tab = createBottomTabNavigator();
+
 
 export default function App() {
   return (
