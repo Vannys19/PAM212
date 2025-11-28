@@ -1,7 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList,StyleSheet, Alert,ActivityIndicator,Platform } from 'react-native';
-import controller from '../controllers/UsuarioConroller';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert, ActivityIndicator, Platform, Pressable } from 'react-native';
+import { UsuarioController } from '../controllers/UsuarioConroller';
+import { Ionicons } from '@expo/vector-icons';
 
+
+const controller = new UsuarioController();
 
 export default function InsertUsuarioScreen() {
 
@@ -9,22 +12,23 @@ export default function InsertUsuarioScreen() {
   const [nombre, setNombre] = useState('');
   const [loading, setLoading] = useState(true);
   const [guardando, setGuardando] = useState(false);
+  const [nombreEditar, setNombreEditar] = useState('');
+  const [idEditar, setIdEditar] = useState(null);
 
-  const cargarUsuarios = useCallback( async () => {
-    try{
+  const cargarUsuarios = useCallback(async () => {
+    try {
       setLoading(true);
       const data = await controller.obtenerUsuarios();
       setUsuarios(data);
       console.log(`${data.length} usuarios cargados.`);
-    }catch (error){
-      Alert.alert('Errorr', error.message);
-    }finally {
-      setLoading (false);
-
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    } finally {
+      setLoading(false);
     }
-  },[]);
+  }, []);
 
-  useEffect (()=>{
+  useEffect(() => {
     const init = async () => {
       await controller.initialize();
       await cargarUsuarios();
@@ -40,57 +44,104 @@ export default function InsertUsuarioScreen() {
   }, [cargarUsuarios]);
 
   const handleAgregar = async () => {
+    if (guardando) return;
 
-    if(guardando) return;
-
-    try{
+    try {
       setGuardando(true);
       const usuarioCreado = await controller.crearUsuario(nombre);
-      Alert.alert('Éxito', `Usuario ${usuarioCreado.nombre} creado con ID ${usuarioCreado.id}
-      `);
+      Alert.alert('Éxito', `Usuario ${usuarioCreado.nombre} creado con ID ${usuarioCreado.id}`);
       setNombre('');
-    }
-    catch (error){
+    } catch (error) {
       Alert.alert('Error', error.message);
-    }finally {
+    } finally {
       setGuardando(false);
     }
   };
 
-  const renderUsuario = ({item, index}) => (
+  const modificar = (item) => {
+    setIdEditar(item.id);
+    setNombreEditar(item.nombre);
+  };
+
+  const GuardarEdicion = async () => {
+    try {
+      await controller.modificarUsuario(idEditar, nombreEditar);
+      Alert.alert("Actualizado", `Actualizado a: ${nombreEditar}`);
+      setIdEditar(null);
+      setNombreEditar('');
+    } catch (error) {
+      Alert.alert('Error:', error.message);
+    }
+  };
+
+  const renderUsuario = ({ item, index }) => (
     <View style={styles.userItem}>
       <View style={styles.userNumber}>
         <Text style={styles.userNumberText}>{index + 1}</Text>
       </View>
+
       <View style={styles.userInfo}>
-        <Text style={styles.userName}>{item.nombre}</Text>
-        <Text style={styles.userId}>ID: {item.id}</Text>
-        <Text style={styles.userDate}>Creado: {new Date(item.fechaCreacion).toLocaleString('es-MX', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        })}
-        </Text>
+        {idEditar === item.id ? (
+          <>
+            <Text>Editar nombre</Text>
+
+            <TextInput
+              style={styles.input}
+              value={nombreEditar}
+              onChangeText={setNombreEditar}
+            />
+            <View style={styles.boton}>
+            <Pressable onPress={GuardarEdicion}>
+              <Text style={{ color: 'black' }}>Guardar</Text>
+            </Pressable>
+
+            <Pressable onPress={() => setIdEditar(null)}>
+              <Text style={{ color: 'blue' }}>Cancelar</Text>
+            </Pressable>
+            </View>
+          </>
+        ) : (
+          <>
+            <Text style={styles.userName}>{item.nombre}</Text>
+            <Text style={styles.userId}>ID: {item.id}</Text>
+            <Text style={styles.userDate}>
+              Creado: {new Date(item.fechaCreacion).toLocaleString('es-MX', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </Text>
+            <View style={styles.Icons}>
+            <Pressable  onPress={() => controller.eliminarUsuario(item.id)}>
+              <Ionicons name="trash-outline" size={22} color="#ff4d4d" />
+            </Pressable>
+
+            <Pressable onPress={() => modificar(item)} >
+              <Ionicons name="create-outline" size={22} color="#4d4dff" />
+            </Pressable>
+            </View>
+
+          </>
+        )}
       </View>
+
     </View>
   );
 
   return (
-    
     <View style={styles.container}>
 
-      {/* Zona del encabezado */}
-
-      <Text style={styles.title}> INSERT & SELECT</Text>
+      <Text style={styles.title}>INSERT & SELECT</Text>
       <Text style={styles.subtitle}>
-        {Platform.OS === 'web' ? ' WEB (LocalStorage)' : ` ${Platform.OS.toUpperCase()} (SQLite)`}
+        {Platform.OS === 'web'
+          ? 'WEB (LocalStorage)'
+          : `${Platform.OS.toUpperCase()} (SQLite)`
+        }
       </Text>
 
-      {/* Zona del INSERT */}
-
       <View style={styles.insertSection}>
-        <Text style={styles.sectionTitle}> Insertar Usuario</Text>
-        
+        <Text style={styles.sectionTitle}>Insertar Usuario</Text>
+
         <TextInput
           style={styles.input}
           placeholder="Escribe el nombre del usuario"
@@ -99,35 +150,24 @@ export default function InsertUsuarioScreen() {
           editable={!guardando}
         />
 
-        <TouchableOpacity 
-          style={[styles.button, guardando && styles.buttonDisabled]} 
+        <TouchableOpacity
+          style={[styles.button, guardando && styles.buttonDisabled]}
           onPress={handleAgregar}
-          disabled={guardando} >
-
+          disabled={guardando}
+        >
           <Text style={styles.buttonText}>
-            {guardando ? ' Guardando...' : 'Agregar Usuario'}
+            {guardando ? 'Guardando...' : 'Agregar Usuario'}
           </Text>
-
         </TouchableOpacity>
-
       </View>
 
-
-
-      {/* Zona del SELECT */}
-
       <View style={styles.selectSection}>
-
         <View style={styles.selectHeader}>
-
           <Text style={styles.sectionTitle}>Lista de Usuarios</Text>
 
-          <TouchableOpacity 
-            style={styles.refreshButton}
-            onPress={cargarUsuarios} >
+          <TouchableOpacity style={styles.refreshButton} onPress={cargarUsuarios}>
             <Text style={styles.refreshText}>Recargar</Text>
           </TouchableOpacity>
-
         </View>
 
         {loading ? (
@@ -135,24 +175,21 @@ export default function InsertUsuarioScreen() {
             <ActivityIndicator size="large" color="#007AFF" />
             <Text style={styles.loadingText}>Cargando usuarios...</Text>
           </View>
-           ) : (
+        ) : (
           <FlatList
             data={usuarios}
             keyExtractor={(item) => item.id.toString()}
             renderItem={renderUsuario}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}> No hay usuarios</Text>
+                <Text style={styles.emptyText}>No hay usuarios</Text>
                 <Text style={styles.emptySubtext}>Agrega el primero arriba</Text>
               </View>
             }
             contentContainerStyle={usuarios.length === 0 && styles.emptyList}
           />
         )}
-
-
       </View>
-
 
     </View>
   );
@@ -313,28 +350,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#bbb',
   },
-  mvcInfo: {
-    backgroundColor: '#e3f2fd',
-    padding: 15,
-    marginHorizontal: 15,
-    marginBottom: 15,
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#2196F3',
-  },
-  mvcTitle: {
-    fontSize: 14,
+  
+  EliminarText: {
+    color: 'red',
     fontWeight: 'bold',
-    color: '#1976D2',
-    marginBottom: 8,
   },
-  mvcText: {
-    fontSize: 12,
-    color: '#555',
-    lineHeight: 18,
-  },
-  bold: {
-    fontWeight: 'bold',
-    color: '#1976D2',
-  },
+ Icons:{
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  width: "100%",
+  paddingHorizontal: -5,
+  
+ },
+ boton:{
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  width: "100%",
+  paddingHorizontal: -5,
+ }
 });

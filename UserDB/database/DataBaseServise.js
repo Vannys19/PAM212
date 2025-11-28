@@ -59,5 +59,41 @@ class DataBaseService {
         }
 
     }
-}
+    async modificar(id, nombre) {
+        if (Platform.OS === 'web') {
+            const usuarios = await this.getAll();
+            const actualizados = usuarios.map(u =>
+                u.id === id ? { ...u, nombre } : u
+            );
+            localStorage.setItem(this.storageKey, JSON.stringify(actualizados));
+    
+            return { id, nombre };
+        } else {
+            await this.db.runAsync(
+                'UPDATE usuarios SET nombre = ? WHERE id = ?',
+                [nombre, id]
+            );
+    
+            return { id, nombre };
+        }
+    }
+    
+    async eliminar(id) {
+        if (Platform.OS === 'web') {
+            const usuarios = await this.getAll();
+            const filtrados = usuarios.filter(u => u.id !== id);
+            localStorage.setItem(this.storageKey, JSON.stringify(filtrados));
+            return true;
+        } else {
+            await this.db.runAsync(
+                'DELETE FROM usuarios WHERE id = ?',
+                [id]
+            );
+            return true;
+        }
+    }
+    
+}   
+
+
 export default new DataBaseService();
